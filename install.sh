@@ -622,6 +622,7 @@ EOF
         echo -e "\e[91mError: Failed to configure SSL with Certbot.\033[0m"
         exit 1
     }
+
     clear
     printf "\e[33m[+] \e[36mBot Token: \033[0m"
     read YOUR_BOT_TOKEN
