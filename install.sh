@@ -496,93 +496,94 @@ EOF
     done
     DOMAIN_NAME="$domainname"
     PATHS=$(cat /root/confmirza/dbrootmirza.txt | grep '$path' | cut -d"'" -f2)
-        echo -e "\033[33mEnable apache2\033[0m"
-        wait
-        sudo systemctl enable apache2 || {
-            echo -e "\e[91mError: Failed to enable Apache2.\033[0m"
-            exit 1
-        }
-        sudo systemctl start apache2 || {
-            echo -e "\e[91mError: Failed to start Apache2.\033[0m"
-            exit 1
-        }
-        # Create Apache VirtualHost configuration for port 80
-        VHOST_FILE="/etc/apache2/sites-available/${DOMAIN_NAME}.conf"
-        sudo tee "$VHOST_FILE" > /dev/null <<EOF
-    <VirtualHost *:80>
-        ServerName $DOMAIN_NAME
-        DocumentRoot $BOT_DIR
-        <Directory $BOT_DIR>
-            Options Indexes FollowSymLinks
-            AllowOverride All
-            Require all granted
-        </Directory>
-        # Include phpMyAdmin configuration
-        Include /etc/apache2/conf-available/phpmyadmin.conf
-        ErrorLog \${APACHE_LOG_DIR}/${DOMAIN_NAME}-error.log
-        CustomLog \${APACHE_LOG_DIR}/${DOMAIN_NAME}-access.log combined
-    </VirtualHost>
-    EOF
-        # Create Apache VirtualHost configuration for port 443 (HTTPS)
-        VHOST_SSL_FILE="/etc/apache2/sites-available/${DOMAIN_NAME}-ssl.conf"
-        sudo tee "$VHOST_SSL_FILE" > /dev/null <<EOF
-    <VirtualHost *:443>
-        ServerName $DOMAIN_NAME
-        DocumentRoot $BOT_DIR
-        SSLEngine on
-        SSLCertificateFile /etc/letsencrypt/live/$DOMAIN_NAME/fullchain.pem
-        SSLCertificateKeyFile /etc/letsencrypt/live/$DOMAIN_NAME/privkey.pem
-        <Directory $BOT_DIR>
-            Options Indexes FollowSymLinks
-            AllowOverride All
-            Require all granted
-        </Directory>
-        # Include phpMyAdmin configuration
-        Include /etc/apache2/conf-available/phpmyadmin.conf
-        ErrorLog \${APACHE_LOG_DIR}/${DOMAIN_NAME}-error.log
-        CustomLog \${APACHE_LOG_DIR}/${DOMAIN_NAME}-access.log combined
-    </VirtualHost>
-    EOF
-        # Enable the new virtual hosts
-        sudo a2ensite "${DOMAIN_NAME}.conf" || {
-            echo -e "\e[91mError: Failed to enable VirtualHost for port 80.\033[0m"
-            exit 1
-        }
-        sudo a2ensite "${DOMAIN_NAME}-ssl.conf" || {
-            echo -e "\e[91mError: Failed to enable VirtualHost for port 443.\033[0m"
-            exit 1
-        }
-        # --- FIX: REMOVE DEFAULT APACHE CONFIGS COMPLETELY ---
-        echo -e "\e[33mRemoving default Apache configurations to prevent conflicts...\033[0m"
+    echo " "
+    echo -e "\033[33mEnable apache2\033[0m"
+    wait
+    sudo systemctl enable apache2 || {
+        echo -e "\e[91mError: Failed to enable Apache2.\033[0m"
+        exit 1
+    }
+    sudo systemctl start apache2 || {
+        echo -e "\e[91mError: Failed to start Apache2.\033[0m"
+        exit 1
+    }
+    # Create Apache VirtualHost configuration for port 80
+    VHOST_FILE="/etc/apache2/sites-available/${DOMAIN_NAME}.conf"
+    sudo tee "$VHOST_FILE" > /dev/null <<EOF
+<VirtualHost *:80>
+    ServerName $DOMAIN_NAME
+    DocumentRoot $BOT_DIR
+    <Directory $BOT_DIR>
+        Options Indexes FollowSymLinks
+        AllowOverride All
+        Require all granted
+    </Directory>
+    # Include phpMyAdmin configuration
+    Include /etc/apache2/conf-available/phpmyadmin.conf
+    ErrorLog \${APACHE_LOG_DIR}/${DOMAIN_NAME}-error.log
+    CustomLog \${APACHE_LOG_DIR}/${DOMAIN_NAME}-access.log combined
+</VirtualHost>
+EOF
+    # Create Apache VirtualHost configuration for port 443 (HTTPS)
+    VHOST_SSL_FILE="/etc/apache2/sites-available/${DOMAIN_NAME}-ssl.conf"
+    sudo tee "$VHOST_SSL_FILE" > /dev/null <<EOF
+<VirtualHost *:443>
+    ServerName $DOMAIN_NAME
+    DocumentRoot $BOT_DIR
+    SSLEngine on
+    SSLCertificateFile /etc/letsencrypt/live/$DOMAIN_NAME/fullchain.pem
+    SSLCertificateKeyFile /etc/letsencrypt/live/$DOMAIN_NAME/privkey.pem
+    <Directory $BOT_DIR>
+        Options Indexes FollowSymLinks
+        AllowOverride All
+        Require all granted
+    </Directory>
+    # Include phpMyAdmin configuration
+    Include /etc/apache2/conf-available/phpmyadmin.conf
+    ErrorLog \${APACHE_LOG_DIR}/${DOMAIN_NAME}-error.log
+    CustomLog \${APACHE_LOG_DIR}/${DOMAIN_NAME}-access.log combined
+</VirtualHost>
+EOF
+    # Enable the new virtual hosts
+    sudo a2ensite "${DOMAIN_NAME}.conf" || {
+        echo -e "\e[91mError: Failed to enable VirtualHost for port 80.\033[0m"
+        exit 1
+    }
+    sudo a2ensite "${DOMAIN_NAME}-ssl.conf" || {
+        echo -e "\e[91mError: Failed to enable VirtualHost for port 443.\033[0m"
+        exit 1
+    }
+    # --- FIX: REMOVE DEFAULT APACHE CONFIGS COMPLETELY ---
+    echo -e "\e[33mRemoving default Apache configurations to prevent conflicts...\033[0m"
 
-        # 1. Disable sites
-        sudo a2dissite 000-default.conf 2>/dev/null || true
-        sudo a2dissite 000-default-le-ssl.conf 2>/dev/null || true
-        sudo a2dissite default-ssl.conf 2>/dev/null || true
+    # 1. Disable sites
+    sudo a2dissite 000-default.conf 2>/dev/null || true
+    sudo a2dissite 000-default-le-ssl.conf 2>/dev/null || true
+    sudo a2dissite default-ssl.conf 2>/dev/null || true
 
-        # 2. Remove symbolic links in sites-enabled (Forceful cleanup)
-        sudo rm -f /etc/apache2/sites-enabled/000-default.conf
-        sudo rm -f /etc/apache2/sites-enabled/000-default-le-ssl.conf
-        sudo rm -f /etc/apache2/sites-enabled/default-ssl.conf
+    # 2. Remove symbolic links in sites-enabled (Forceful cleanup)
+    sudo rm -f /etc/apache2/sites-enabled/000-default.conf
+    sudo rm -f /etc/apache2/sites-enabled/000-default-le-ssl.conf
+    sudo rm -f /etc/apache2/sites-enabled/default-ssl.conf
 
-        # 3. Remove original files in sites-available (Optional but requested)
-        # This ensures they can never be enabled again by mistake
-        sudo rm -f /etc/apache2/sites-available/000-default.conf
-        sudo rm -f /etc/apache2/sites-available/000-default-le-ssl.conf
-        sudo rm -f /etc/apache2/sites-available/default-ssl.conf
-        sleep 3
+    # 3. Remove original files in sites-available (Optional but requested)
+    # This ensures they can never be enabled again by mistake
+    sudo rm -f /etc/apache2/sites-available/000-default.conf
+    sudo rm -f /etc/apache2/sites-available/000-default-le-ssl.conf
+    sudo rm -f /etc/apache2/sites-available/default-ssl.conf
+    sleep 3
 
-        # Enable SSL module
-        sudo a2enmod ssl || {
-            echo -e "\e[91mError: Failed to enable SSL module.\033[0m"
-            exit 1
-        }
-        # Restart Apache to apply new configuration
-        sudo systemctl restart apache2 || {
-            echo -e "\e[91mError: Failed to restart Apache2 with new configuration.\033[0m"
-            exit 1
-        }
-        clear
+    # Enable SSL module
+    sudo a2enmod ssl || {
+        echo -e "\e[91mError: Failed to enable SSL module.\033[0m"
+        exit 1
+    }
+    # Restart Apache to apply new configuration
+    sudo systemctl restart apache2 || {
+        echo -e "\e[91mError: Failed to restart Apache2 with new configuration.\033[0m"
+        exit 1
+    }
+
     sudo ufw allow 80 || {
         echo -e "\e[91mError: Failed to allow port 80 in UFW.\033[0m"
         exit 1
@@ -621,7 +622,7 @@ EOF
         echo -e "\e[91mError: Failed to configure SSL with Certbot.\033[0m"
         exit 1
     }
-    echo " "
+    clear
     printf "\e[33m[+] \e[36mBot Token: \033[0m"
     read YOUR_BOT_TOKEN
     while [[ ! "$YOUR_BOT_TOKEN" =~ ^[0-9]{8,10}:[a-zA-Z0-9_-]{35}$ ]]; do
